@@ -24,8 +24,20 @@ func main() {
 }
 
 func weatherHandler(w http.ResponseWriter, req *http.Request) {
+
 	owc := openweather.NewOpenWeatherClient(APIKEY)
-	f := owc.GetForecast("Bogota", "co")
+
+	params := req.URL.Query()
+	city, found := params["city"]
+	if !found || len(city) < 1 {
+		log.Fatalln("city param is missed")
+	}
+	country, found := params["country"]
+	if !found || len(country) < 1 {
+		log.Fatalln("country param is missed")
+	}
+
+	f := owc.GetForecast(city[0], country[0])
 
 	spew.Dump(f)
 
