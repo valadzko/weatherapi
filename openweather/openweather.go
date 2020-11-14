@@ -3,6 +3,7 @@ package openweather
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"time"
@@ -23,7 +24,7 @@ func NewOpenWeatherClient(a string) *OpenWeatherClient {
 	return owc
 }
 
-func (owc OpenWeatherClient) GetForecast(city, country string) *Forecast {
+func (owc *OpenWeatherClient) GetForecast(city, country string) *Forecast {
 	url := fmt.Sprintf("%s/weather?q=%s,%s&appid=%s", owc.BaseURL, city, country, owc.Apikey)
 	resp, err := http.Get(url)
 	if err != nil {
@@ -31,11 +32,19 @@ func (owc OpenWeatherClient) GetForecast(city, country string) *Forecast {
 	}
 	defer resp.Body.Close()
 
-	var f *Forecast
-	if err := json.NewDecoder(resp.Body).Decode(f); err != nil {
-		log.Fatal("failed to decode forecast")
+	var f Forecast
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalln("failed to parse response body")
 	}
-	return f
+
+	err = json.Unmarshal(body, &f)
+	if err != nil {
+		log.Fatalln("failed unmarshal response body")
+	}
+
+	return &f
 }
 
 type Forecast struct {
