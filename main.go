@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/gomodule/redigo/redis"
+
 	"github.com/davecgh/go-spew/spew"
 	"github.com/valadzko/weatherapi/openweather"
 )
@@ -15,9 +17,19 @@ import (
 var (
 	APIKEY = "1508a9a4840a5574c822d70ca2132032"
 	PORT   = ":8080"
+	c      redis.Conn
+	err    error
 )
 
+func init() {
+	c, err = redis.Dial("tcp", ":6379")
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func main() {
+
 	http.HandleFunc("/weather", weatherHandler)
 
 	fmt.Println("Started server at port 8080:")
