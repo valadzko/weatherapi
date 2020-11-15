@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"time"
@@ -20,12 +22,19 @@ func main() {
 	redisPort := getEnv("REDIS_PORT", "6379")
 	ttl := 2 * time.Minute
 
-	// connect to redis
+	// init and connect to redis
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%s", redisHost, redisPort),
-		Password: "", // no password set
-		DB:       0,  // use default DB
+		Addr:       fmt.Sprintf("%s:%s", redisHost, redisPort),
+		Password:   "", // no password set
+		DB:         0,  // use default DB
+		MaxRetries: 3,
 	})
+	ctx := context.Background()
+	pong, _ := rdb.Ping(ctx).Result()
+	if pong != "PONG" {
+		log.Fatalf("could not connect to redis: %s:%s", redisHost, redisPort)
+	}
+	defer rdb.Close()
 
 	// create repo
 	repo := repositories.NewForecastRepo(rdb, ttl)
@@ -40,7 +49,7 @@ func main() {
 	// create and start server
 	s := &http.Server{Addr: fmt.Sprintf("127.0.0.1:%s", port)}
 	fmt.Printf("Started server at port :%s\n", port)
-	s.ListenAndServe()
+	log.Fatal(s.ListenAndServe())
 }
 
 func getEnv(key, defvalue string) string {

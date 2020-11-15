@@ -30,25 +30,31 @@ func (h *WeatherHandler) Weather(w http.ResponseWriter, r *http.Request) {
 	var err error
 	request, err := parseRequest(*r.URL)
 	if err != nil {
-		// return
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(fmt.Sprintf("400 - Bad request:%s", err.Error())))
+		return
 	}
 	if err := request.validate(); err != nil {
-		// return
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		w.Write([]byte(fmt.Sprintf("422 - Unprocessable Entity:%s", err.Error())))
+		return
 	}
 	var f *models.Forecast
 
 	if request.day == nil {
+		fmt.Printf("GET /weather?&city=%s,country=%s\n", request.city, request.country)
+
 		// lookup in cache
-		f, err = h.repo.FindByCityAndCountry(request.city, request.country)
-		if err != nil {
-			fmt.Printf("info: could not find cache for %s,%s\n", request.city, request.country)
-		}
+		f, _ = h.repo.FindByCityAndCountry(request.city, request.country)
 		// request forecast from server
 		if f == nil {
 			f, err = h.wc.GetForecast(request.city, request.country)
 			if err != nil {
 				// could not find forecast in both cache and remote server
-				fmt.Println("GetForecast - error!")
+				fmt.Printf("could not find forecast: %s", err.Error())
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte(fmt.Sprintf("500 - Something bad happened!")))
+				return
 			}
 			if f != nil {
 				// caching forecast
@@ -58,17 +64,19 @@ func (h *WeatherHandler) Weather(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	} else {
+		// day parameter is present
+		fmt.Printf("GET /weather?&city=%s&country=%s&day=%s\n", request.city, request.country, *request.day)
 		// lookup in cache
-		f, err = h.repo.FindByCityCountryAndDay(request.city, request.country, *request.day)
-		if err != nil {
-			fmt.Printf("info: could not find cache for %s,%s\n", request.city, request.country)
-		}
+		f, _ = h.repo.FindByCityCountryAndDay(request.city, request.country, *request.day)
 		// request forecast from server
 		if f == nil {
 			f, err = h.wc.GetForecastForDay(request.city, request.country, *request.day)
 			if err != nil {
 				// could not find forecast in both cache and remote server
-				fmt.Println("GetForecastForDay - error!")
+				fmt.Printf("could not find forecast: %s", err.Error())
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte(fmt.Sprintf("500 - Something bad happened!")))
+				return
 			}
 			if f != nil {
 				// caching forecast
@@ -134,7 +142,7 @@ func (r *request) validate() error {
 
 	if r.country != strings.ToLower(r.country) {
 		// this could be just lowercased,
-		// but I am leaving it like this according to the requirement
+		// but I am leaving it like this according to the requirement:
 		// (Country is a country code of two characters in lowercase. Example: co)
 		return errors.New("country parameter must contain only lowercase characters")
 	}
@@ -157,15 +165,13 @@ func parseRequest(url url.URL) (request, error) {
 
 	city, found := params["city"]
 	if len(city) < 1 {
-		// return error
-		log.Fatalln("required city parameter is missed")
+		return res, errors.New("required city parameter is missed")
 	}
 	res.city = city[0]
 
 	country, found := params["country"]
 	if len(country) < 1 {
-		// return error
-		log.Fatalln("required country parameter is missed")
+		return res, errors.New("required country parameter is missed")
 	}
 	res.country = country[0]
 
@@ -173,8 +179,7 @@ func parseRequest(url url.URL) (request, error) {
 	if found {
 		d, err := strconv.Atoi(day[0])
 		if err != nil {
-			//return error
-			log.Fatalln("parameter day must be a number")
+			return res, errors.New("parameter day must be a number")
 		}
 		res.day = &d
 	}

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/go-redis/redis/v8"
 	"github.com/valadzko/weatherapi/models"
 )
@@ -61,14 +60,13 @@ func (fr *ForecastRepo) find(key string) (*models.Forecast, error) {
 	ctx := context.Background()
 	val, err := fr.rdb.Get(ctx, key).Result()
 	if err == redis.Nil {
-		fmt.Printf("key does not exist:\n%s", key)
+		return nil, nil
 	} else if err != nil {
 		panic(err)
 	}
 
 	var f *models.Forecast
-	fmt.Println("val:")
-	spew.Dump(val)
+
 	err = json.Unmarshal([]byte(val), &f)
 	if err != nil {
 		fmt.Println("Could not unmarshal forecast from cache")

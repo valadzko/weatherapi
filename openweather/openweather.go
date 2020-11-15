@@ -29,6 +29,7 @@ func NewOpenWeatherClient(a string) *OpenWeatherClient {
 
 func (owc *OpenWeatherClient) GetForecast(city, country string) (*models.Forecast, error) {
 	url := fmt.Sprintf("%s/weather?q=%s,%s&appid=%s&units=metric", owc.BaseURL, city, country, owc.Apikey)
+
 	resp, err := http.Get(url)
 	if err != nil {
 		log.Fatal("failed to reach open weather api")
@@ -55,6 +56,7 @@ func (owc *OpenWeatherClient) GetForecast(city, country string) (*models.Forecas
 func (owc *OpenWeatherClient) GetForecastForDay(city, country string, day int) (*models.Forecast, error) {
 	dayIndex := day + 1
 	url := fmt.Sprintf("%s/forecast?q=%s,%s&cnt=%d&appid=%s&units=metric", owc.BaseURL, city, country, dayIndex, owc.Apikey)
+
 	resp, err := http.Get(url)
 	if err != nil {
 		log.Fatal("failed to reach open weather api")
