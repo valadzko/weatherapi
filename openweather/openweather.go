@@ -145,7 +145,7 @@ func daytime(t int) string {
 
 func currentTimestampString() string {
 	t := time.Now()
-	return t.Format("2006-02-03 09:15:05")
+	return t.Format("2006-01-02 15:04:05")
 }
 
 type ApiBulkForecast struct {
