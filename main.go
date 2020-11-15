@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
@@ -39,7 +40,16 @@ func weatherHandler(w http.ResponseWriter, req *http.Request) {
 		log.Fatalln("country param is missed")
 	}
 
-	f := owc.GetForecast(city[0], country[0])
+	var f *openweather.Forecast
+
+	day, found := params["day"]
+	if found {
+		d, _ := strconv.Atoi(day[0])
+		f = owc.GetForecastForDay(city[0], country[0], d)
+	} else {
+		f = owc.GetForecast(city[0], country[0])
+	}
+
 	resp := forecastToResponse(f)
 
 	r, err := json.Marshal(resp)

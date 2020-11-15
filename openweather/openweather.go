@@ -47,6 +47,46 @@ func (owc *OpenWeatherClient) GetForecast(city, country string) *Forecast {
 	return &f
 }
 
+func (owc *OpenWeatherClient) GetForecastForDay(city, country string, day int) *Forecast {
+	dayIndex := day - 1
+	url := fmt.Sprintf("%s/forecast?q=%s,%s&cnt=%d&appid=%s&units=metric", owc.BaseURL, city, country, dayIndex, owc.Apikey)
+	resp, err := http.Get(url)
+	if err != nil {
+		log.Fatal("failed to reach open weather api")
+	}
+	defer resp.Body.Close()
+
+	var bf BulkForecast
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalln("failed to parse response body")
+	}
+
+	err = json.Unmarshal(body, &bf)
+	if err != nil {
+		log.Fatalln("failed unmarshal response body")
+	}
+
+	if len(bf.Forecasts) < day {
+		log.Fatalln("there is not enough forecasts")
+	}
+
+	f := &bf.Forecasts[dayIndex]
+
+	f.Coord = bf.City.Coord
+
+	sys := Sys{
+		Country: bf.City.Country,
+		Sunrise: bf.City.Sunrise,
+		Sunset:  bf.City.Sunset,
+	}
+	f.Sys = sys
+	f.Name = bf.City.Name
+
+	return f
+}
+
 type Forecast struct {
 	Coord      Coord     `json:"coord"`
 	Weather    []Weather `json:"weather"`
@@ -61,7 +101,19 @@ type Forecast struct {
 	ID         int       `json:"id"`
 	Name       string    `json:"name"`
 	Cod        int       `json:"cod"`
+	Pop        float64   `json:"pop"`
+	Rain       Rain      `json:"rain"`
+	DtTxt      string    `json:"dt_txt"`
 }
+
+type BulkForecast struct {
+	Cod       string     `json:"cod"`
+	Message   int        `json:"message"`
+	Cnt       int        `json:"cnt"`
+	Forecasts []Forecast `json:"list"`
+	City      City       `json:"city"`
+}
+
 type Coord struct {
 	Lon float64 `json:"lon"`
 	Lat float64 `json:"lat"`
@@ -72,14 +124,7 @@ type Weather struct {
 	Description string `json:"description"`
 	Icon        string `json:"icon"`
 }
-type Main struct {
-	Temp      float64 `json:"temp"`
-	FeelsLike float64 `json:"feels_like"`
-	TempMin   float64 `json:"temp_min"`
-	TempMax   float64 `json:"temp_max"`
-	Pressure  int     `json:"pressure"`
-	Humidity  int     `json:"humidity"`
-}
+
 type Wind struct {
 	Speed float64 `json:"speed"`
 	Deg   int     `json:"deg"`
@@ -93,4 +138,32 @@ type Sys struct {
 	Country string `json:"country"`
 	Sunrise int    `json:"sunrise"`
 	Sunset  int    `json:"sunset"`
+	Pod     string `json:"pod"`
+}
+
+type Main struct {
+	Temp      float64 `json:"temp"`
+	FeelsLike float64 `json:"feels_like"`
+	TempMin   float64 `json:"temp_min"`
+	TempMax   float64 `json:"temp_max"`
+	Pressure  int     `json:"pressure"`
+	SeaLevel  int     `json:"sea_level"`
+	GrndLevel int     `json:"grnd_level"`
+	Humidity  int     `json:"humidity"`
+	TempKf    float64 `json:"temp_kf"`
+}
+
+type Rain struct {
+	ThreeH float64 `json:"3h"`
+}
+
+type City struct {
+	ID         int    `json:"id"`
+	Name       string `json:"name"`
+	Coord      Coord  `json:"coord"`
+	Country    string `json:"country"`
+	Population int    `json:"population"`
+	Timezone   int    `json:"timezone"`
+	Sunrise    int    `json:"sunrise"`
+	Sunset     int    `json:"sunset"`
 }
