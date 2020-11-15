@@ -11,31 +11,37 @@ import (
 	"github.com/gomodule/redigo/redis"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/valadzko/weatherapi/controllers"
 	"github.com/valadzko/weatherapi/openweather"
 )
 
-var (
-	APIKEY = "1508a9a4840a5574c822d70ca2132032"
-	PORT   = ":8080"
-	c      redis.Conn
-	err    error
-)
+func main() {
+	//read APIKEY from ENV
+	apikey := ""
 
-func init() {
-	c, err = redis.Dial("tcp", ":6379")
+	//read application port from ENV
+	port := "8080"
+
+	// connect to redis
+	rc, err := redis.Dial("tcp", "localhost:6379")
 	if err != nil {
 		log.Fatal(err)
 	}
-}
+	defer rc.Close()
 
-func main() {
+	// create repo
+	repo := NewForecastRepo(rc)
 
-	http.HandleFunc("/weather", weatherHandler)
+	// create open weather client
+	owc := openweather.NewOpenWeatherClient(apikey)
 
-	fmt.Println("Started server at port 8080:")
-	if err := http.ListenAndServe(PORT, nil); err != nil {
-		log.Fatal(err)
-	}
+	// create handler
+	h := controllers.NewWeatherHandler(repo, owc)
+	http.HandleFunc("/weather", h.Weather)
+
+	// create and start server
+	s := &http.Server{Addr: fmt.Sprintf("127.0.0.1:%s", port)}
+	s.ListenAndServe()
 }
 
 func weatherHandler(w http.ResponseWriter, req *http.Request) {
