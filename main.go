@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/gomodule/redigo/redis"
-
 	"github.com/valadzko/weatherapi/controllers"
 	"github.com/valadzko/weatherapi/openweather"
 	"github.com/valadzko/weatherapi/repositories"
@@ -28,7 +27,7 @@ func main() {
 	defer rc.Close()
 
 	// create repo
-	repo := repositories.NewForecastRepo(nil)
+	repo := repositories.NewForecastRepo(&rc)
 
 	// create open weather client
 	owc := openweather.NewOpenWeatherClient(apikey)

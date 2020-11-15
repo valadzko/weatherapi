@@ -1,6 +1,6 @@
 package repositories
 
-import "github.com/go-redis/redis"
+import "github.com/gomodule/redigo/redis"
 
 type ForecastRepo struct {
 	rc *redis.Conn
