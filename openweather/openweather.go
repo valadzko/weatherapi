@@ -7,6 +7,8 @@ import (
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/valadzko/weatherapi/models"
 )
 
 type OpenWeatherClient struct {
@@ -24,7 +26,7 @@ func NewOpenWeatherClient(a string) *OpenWeatherClient {
 	return owc
 }
 
-func (owc *OpenWeatherClient) GetForecast(city, country string) *Forecast {
+func (owc *OpenWeatherClient) GetForecast(city, country string) (*models.Forecast, error) {
 	url := fmt.Sprintf("%s/weather?q=%s,%s&appid=%s&units=metric", owc.BaseURL, city, country, owc.Apikey)
 	resp, err := http.Get(url)
 	if err != nil {
@@ -32,7 +34,7 @@ func (owc *OpenWeatherClient) GetForecast(city, country string) *Forecast {
 	}
 	defer resp.Body.Close()
 
-	var f Forecast
+	var f ApiForecast
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -44,11 +46,13 @@ func (owc *OpenWeatherClient) GetForecast(city, country string) *Forecast {
 		log.Fatalln("failed unmarshal response body")
 	}
 
-	return &f
+	forecastModel := f.fromApiToModel()
+
+	return forecastModel, nil
 }
 
-func (owc *OpenWeatherClient) GetForecastForDay(city, country string, day int) *Forecast {
-	dayIndex := day - 1
+func (owc *OpenWeatherClient) GetForecastForDay(city, country string, day int) (*models.Forecast, error) {
+	dayIndex := day + 1
 	url := fmt.Sprintf("%s/forecast?q=%s,%s&cnt=%d&appid=%s&units=metric", owc.BaseURL, city, country, dayIndex, owc.Apikey)
 	resp, err := http.Get(url)
 	if err != nil {
@@ -56,7 +60,7 @@ func (owc *OpenWeatherClient) GetForecastForDay(city, country string, day int) *
 	}
 	defer resp.Body.Close()
 
-	var bf BulkForecast
+	var bf ApiBulkForecast
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -68,35 +72,38 @@ func (owc *OpenWeatherClient) GetForecastForDay(city, country string, day int) *
 		log.Fatalln("failed unmarshal response body")
 	}
 
-	if len(bf.Forecasts) < day {
+	if len(bf.ApiForecasts) < day {
+		//return error
 		log.Fatalln("there is not enough forecasts")
 	}
 
-	f := &bf.Forecasts[dayIndex]
+	f := &bf.ApiForecasts[dayIndex]
 
-	f.Coord = bf.City.Coord
-
-	sys := Sys{
-		Country: bf.City.Country,
-		Sunrise: bf.City.Sunrise,
-		Sunset:  bf.City.Sunset,
+	if bf.City != nil {
+		f.Coord = &bf.City.Coord
+		sys := Sys{
+			Country: bf.City.Country,
+			Sunrise: bf.City.Sunrise,
+			Sunset:  bf.City.Sunset,
+		}
+		f.Sys = &sys
+		f.Name = bf.City.Name
 	}
-	f.Sys = sys
-	f.Name = bf.City.Name
 
-	return f
+	forecastModel := f.fromApiToModel()
+	return forecastModel, nil
 }
 
-type Forecast struct {
-	Coord      Coord     `json:"coord"`
+type ApiForecast struct {
+	Coord      *Coord    `json:"coord"`
 	Weather    []Weather `json:"weather"`
 	Base       string    `json:"base"`
-	Main       Main      `json:"main"`
+	Main       *Main     `json:"main"`
 	Visibility int       `json:"visibility"`
 	Wind       Wind      `json:"wind"`
 	Clouds     Clouds    `json:"clouds"`
 	Dt         int       `json:"dt"`
-	Sys        Sys       `json:"sys"`
+	Sys        *Sys      `json:"sys"`
 	Timezone   int       `json:"timezone"`
 	ID         int       `json:"id"`
 	Name       string    `json:"name"`
@@ -106,12 +113,45 @@ type Forecast struct {
 	DtTxt      string    `json:"dt_txt"`
 }
 
-type BulkForecast struct {
-	Cod       string     `json:"cod"`
-	Message   int        `json:"message"`
-	Cnt       int        `json:"cnt"`
-	Forecasts []Forecast `json:"list"`
-	City      City       `json:"city"`
+func (api *ApiForecast) fromApiToModel() *models.Forecast {
+	fm := models.Forecast{
+		City:          api.Name,
+		Wind:          "",
+		Cloudiness:    "",
+		RequestedTime: currentTimestampString(),
+	}
+	if api.Sys != nil {
+		fm.Country = api.Sys.Country
+		fm.Sunrise = daytime(api.Sys.Sunrise)
+		fm.Sunset = daytime(api.Sys.Sunset)
+	}
+	if api.Main != nil {
+		fm.Temperature = api.Main.Temp
+		fm.Pressure = api.Main.Pressure
+		fm.Humidity = api.Main.Humidity
+	}
+	if api.Coord != nil {
+		fm.GeoCoordinates = fmt.Sprintf("[%.2f,%.2f]", api.Coord.Lon, api.Coord.Lat)
+	}
+	return &fm
+}
+
+func daytime(t int) string {
+	timeT := time.Unix(int64(t), 0)
+	return fmt.Sprintf("%d:%d", timeT.Hour(), timeT.Minute())
+}
+
+func currentTimestampString() string {
+	t := time.Now()
+	return t.Format("2006-02-03 09:15:05")
+}
+
+type ApiBulkForecast struct {
+	Cod          string        `json:"cod"`
+	Message      int           `json:"message"`
+	Cnt          int           `json:"cnt"`
+	ApiForecasts []ApiForecast `json:"list"`
+	City         *City         `json:"city"`
 }
 
 type Coord struct {
