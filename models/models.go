@@ -16,5 +16,5 @@ type Forecast struct {
 
 type ForecastRepository interface {
 	//	FindByCityAndCountry(city, country string) (*Forecast, error)
-	//	Save(f *Forecast) error
+	Save(f *Forecast) error
 }

@@ -2,11 +2,10 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 
-	"github.com/gomodule/redigo/redis"
+	"github.com/go-redis/redis/v8"
 	"github.com/valadzko/weatherapi/controllers"
 	"github.com/valadzko/weatherapi/openweather"
 	"github.com/valadzko/weatherapi/repositories"
@@ -20,14 +19,14 @@ func main() {
 	redisPort := getEnv("REDIS_PORT", "6379")
 
 	// connect to redis
-	rc, err := redis.Dial("tcp", fmt.Sprintf("%s:%s", redisHost, redisPort))
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer rc.Close()
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%s", redisHost, redisPort),
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
 
 	// create repo
-	repo := repositories.NewForecastRepo(&rc)
+	repo := repositories.NewForecastRepo(&rdb)
 
 	// create open weather client
 	owc := openweather.NewOpenWeatherClient(apikey)
