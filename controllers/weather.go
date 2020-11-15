@@ -27,6 +27,7 @@ func NewWeatherHandler(repo models.ForecastRepository, wc *openweather.OpenWeath
 }
 
 func (h *WeatherHandler) Weather(w http.ResponseWriter, r *http.Request) {
+	var err error
 	request, err := parseRequest(*r.URL)
 	if err != nil {
 		// return
@@ -34,24 +35,49 @@ func (h *WeatherHandler) Weather(w http.ResponseWriter, r *http.Request) {
 	if err := request.validate(); err != nil {
 		// return
 	}
-
-	// todo - searching for forecast in cache
 	var f *models.Forecast
 
-	// if not found - request via open weather api
-	if request.day != nil {
-		f, err = h.wc.GetForecastForDay(request.city, request.country, *request.day)
+	if request.day == nil {
+		// lookup in cache
+		f, err = h.repo.FindByCityAndCountry(request.city, request.country)
 		if err != nil {
-			// return
+			fmt.Printf("info: could not find cache for %s,%s\n", request.city, request.country)
+		}
+		// request forecast from server
+		if f == nil {
+			f, err = h.wc.GetForecast(request.city, request.country)
+			if err != nil {
+				// could not find forecast in both cache and remote server
+				fmt.Println("GetForecast - error!")
+			}
+			if f != nil {
+				// caching forecast
+				if err := h.repo.Save(f); err != nil {
+					fmt.Printf("failed to cache forecast: %d\n", err)
+				}
+			}
 		}
 	} else {
-		f, err = h.wc.GetForecast(request.city, request.country)
+		// lookup in cache
+		f, err = h.repo.FindByCityCountryAndDay(request.city, request.country, *request.day)
 		if err != nil {
-			// return
+			fmt.Printf("info: could not find cache for %s,%s\n", request.city, request.country)
+		}
+		// request forecast from server
+		if f == nil {
+			f, err = h.wc.GetForecastForDay(request.city, request.country, *request.day)
+			if err != nil {
+				// could not find forecast in both cache and remote server
+				fmt.Println("GetForecastForDay - error!")
+			}
+			if f != nil {
+				// caching forecast
+				if err := h.repo.SaveWithDay(f, *request.day); err != nil {
+					fmt.Printf("failed to cache forecast: %d\n", err)
+				}
+			}
 		}
 	}
-
-	//todo save f to cache
 
 	res := forecastModelToResponse(f)
 	w.Header().Set("Content-type", "application/json")
@@ -94,6 +120,7 @@ type response struct {
 	RequestedTime  string `json:"requested_time"`
 	Forecast       string `json:"forecast"`
 }
+
 type request struct {
 	city    string
 	country string

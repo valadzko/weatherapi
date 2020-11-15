@@ -18,5 +18,5 @@ type ForecastRepository interface {
 	Save(f *Forecast) error
 	SaveWithDay(f *Forecast, day int) error
 	FindByCityAndCountry(city, country string) (*Forecast, error)
-	FindByCityCountryAndDay(city, country string, day int) (*Forecast, error))
+	FindByCityCountryAndDay(city, country string, day int) (*Forecast, error)
 }

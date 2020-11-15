@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/valadzko/weatherapi/models"
@@ -120,7 +121,7 @@ func (api *ApiForecast) fromApiToModel() *models.Forecast {
 		RequestedTime: currentTimestampString(),
 	}
 	if api.Sys != nil {
-		fm.Country = api.Sys.Country
+		fm.Country = strings.ToLower(api.Sys.Country)
 		fm.Sunrise = daytime(api.Sys.Sunrise)
 		fm.Sunset = daytime(api.Sys.Sunset)
 	}

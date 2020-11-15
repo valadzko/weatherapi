@@ -28,7 +28,7 @@ func main() {
 	})
 
 	// create repo
-	repo := repositories.NewForecastRepo(&rdb, ttl)
+	repo := repositories.NewForecastRepo(rdb, ttl)
 
 	// create open weather client
 	owc := openweather.NewOpenWeatherClient(apikey)
