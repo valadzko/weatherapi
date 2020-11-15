@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/valadzko/weatherapi/models"
 	"github.com/valadzko/weatherapi/openweather"
 )
@@ -78,8 +77,6 @@ func forecastModelToResponse(f *models.Forecast) string {
 	if err != nil {
 		log.Fatalln("failed to marshall response")
 	}
-
-	spew.Dump(res)
 
 	return string(res)
 }

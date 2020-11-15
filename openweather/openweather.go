@@ -71,13 +71,12 @@ func (owc *OpenWeatherClient) GetForecastForDay(city, country string, day int) (
 	if err != nil {
 		log.Fatalln("failed unmarshal response body")
 	}
-
 	if len(bf.ApiForecasts) < day {
 		//return error
 		log.Fatalln("there is not enough forecasts")
 	}
 
-	f := &bf.ApiForecasts[dayIndex]
+	f := &bf.ApiForecasts[day]
 
 	if bf.City != nil {
 		f.Coord = &bf.City.Coord
