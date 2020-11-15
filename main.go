@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -16,14 +17,14 @@ import (
 )
 
 func main() {
-	//read APIKEY from ENV
-	apikey := ""
 
-	//read application port from ENV
-	port := "8080"
+	apikey := getEnv("APIKEY", "1508a9a4840a5574c822d70ca2132032")
+	port := getEnv("PORT", "8080")
+	redisHost := getEnv("REDIS_HOST", "127.0.0.1")
+	redisPort := getEnv("REDIS_PORT", "6379")
 
 	// connect to redis
-	rc, err := redis.Dial("tcp", "localhost:6379")
+	rc, err := redis.Dial("tcp", fmt.Sprintf("%s:%s", redisHost, redisPort))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -42,6 +43,14 @@ func main() {
 	// create and start server
 	s := &http.Server{Addr: fmt.Sprintf("127.0.0.1:%s", port)}
 	s.ListenAndServe()
+}
+
+func getEnv(key, defvalue string) string {
+	value, exists := os.LookupEnv(key)
+	if !exists {
+		value = defvalue
+	}
+	return value
 }
 
 func weatherHandler(w http.ResponseWriter, req *http.Request) {
