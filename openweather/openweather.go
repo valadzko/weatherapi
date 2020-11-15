@@ -25,7 +25,7 @@ func NewOpenWeatherClient(a string) *OpenWeatherClient {
 }
 
 func (owc *OpenWeatherClient) GetForecast(city, country string) *Forecast {
-	url := fmt.Sprintf("%s/weather?q=%s,%s&appid=%s", owc.BaseURL, city, country, owc.Apikey)
+	url := fmt.Sprintf("%s/weather?q=%s,%s&appid=%s&units=metric", owc.BaseURL, city, country, owc.Apikey)
 	resp, err := http.Get(url)
 	if err != nil {
 		log.Fatal("failed to reach open weather api")

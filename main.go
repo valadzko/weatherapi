@@ -56,7 +56,7 @@ func weatherHandler(w http.ResponseWriter, req *http.Request) {
 func forecastToResponse(f *openweather.Forecast) *response {
 	r := &response{}
 	name := fmt.Sprintf("%s,%s", f.Name, f.Sys.Country)
-	temperature := fmt.Sprintf("%.2f °C", kelvinToCelcius(f.Main.Temp))
+	temperature := fmt.Sprintf("%.2f °C", f.Main.Temp)
 	// wind =
 	// cloudiness :=
 	pressure := fmt.Sprintf("%d hpa", f.Main.Pressure)
@@ -76,10 +76,6 @@ func forecastToResponse(f *openweather.Forecast) *response {
 	r.GeoCoordinates = geo
 	r.RequestedTime = currentTimestampString()
 	return r
-}
-
-func kelvinToCelcius(k float64) float64 {
-	return k - 273.15
 }
 
 func daytime(t int) string {
