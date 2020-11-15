@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/go-redis/redis/v8"
 	"github.com/valadzko/weatherapi/controllers"
@@ -17,6 +18,7 @@ func main() {
 	port := getEnv("PORT", "8080")
 	redisHost := getEnv("REDIS_HOST", "127.0.0.1")
 	redisPort := getEnv("REDIS_PORT", "6379")
+	ttl := 2 * time.Minute
 
 	// connect to redis
 	rdb := redis.NewClient(&redis.Options{
@@ -26,7 +28,7 @@ func main() {
 	})
 
 	// create repo
-	repo := repositories.NewForecastRepo(&rdb)
+	repo := repositories.NewForecastRepo(&rdb, ttl)
 
 	// create open weather client
 	owc := openweather.NewOpenWeatherClient(apikey)
